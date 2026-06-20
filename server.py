@@ -38,14 +38,15 @@ class RosterHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(b"Unauthorized: Invalid passcode.")
                 return
             
-            mode = query.get('mode', ['report'])[0]
-            
-            # Open document and keep a clean source for copying
-            doc = fitz.open(r'media__1781707928976.pdf')
-            doc_src = fitz.open(r'media__1781707928976.pdf')
-            page = doc[0]
-            
-            time_str = query.get('time', [''])[0]
+            try:
+                mode = query.get('mode', ['report'])[0]
+                
+                # Open document and keep a clean source for copying
+                doc = fitz.open(r'media__1781707928976.pdf')
+                doc_src = fitz.open(r'media__1781707928976.pdf')
+                page = doc[0]
+                
+                time_str = query.get('time', [''])[0]
             if time_str:
                 try:
                     t_str = time_str.replace('Z', '+00:00')
@@ -299,37 +300,38 @@ class RosterHandler(SimpleHTTPRequestHandler):
                         rect = fitz.Rect(w[0]-0.5 + shift_offset, w[1]-0.5, w[2]+0.5 + shift_offset, w[3]-0.5)
                         
                     page.draw_rect(rect, color=(1,1,1), fill=(1,1,1))
-                    
-                    # Draw the new dynamically mapped date string
-                    # Add 1.30 to w[0] to perfectly align the text baseline with the original text
-                    drawAbs(new_str, w[0] + shift_offset + 1.30, w[1], 5.977)
 
-            # Fully rebuild the PDF structure to maximize compatibility with 3rd party viewers like Acrobat
-            pdf_bytes = doc.write(garbage=3, deflate=True)
-            
-            self.send_response(200)
-            self.send_header('Content-type', 'application/pdf')
-            self.send_header('Content-Disposition', 'inline; filename="roster_generated.pdf"')
-            self.send_header('Content-Length', str(len(pdf_bytes)))
-            self.end_headers()
-            self.wfile.write(pdf_bytes)
-            return
+                # Fully rebuild the PDF structure to maximize compatibility with 3rd party viewers like Acrobat
+                pdf_bytes = doc.write(garbage=3, deflate=True)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/pdf')
+                self.send_header('Content-Disposition', 'inline; filename="roster_generated.pdf"')
+                self.send_header('Content-Length', str(len(pdf_bytes)))
+                self.end_headers()
+                self.wfile.write(pdf_bytes)
+                return
+            except Exception as e:
+                import traceback
+                err_str = traceback.format_exc()
+                print("GENERATION ERROR:", err_str)
+                self.send_response(500)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(f"Server Error during generation:\n{err_str}".encode('utf-8'))
+                return
             
         self.send_response(404)
         self.end_headers()
 
 if __name__ == '__main__':
     import shutil
-    import os
     src = r'C:\Users\ocsel\.gemini\antigravity\brain\d9186601-3f45-4232-ab00-e04274196300\media__1781707928976.pdf'
     if not os.path.exists('media__1781707928976.pdf'):
-        try:
-            shutil.copy(src, 'media__1781707928976.pdf')
-        except:
-            pass
-
+        shutil.copy(src, 'media__1781707928976.pdf')
+    
     HTTPServer.allow_reuse_address = True
     port = int(os.environ.get('PORT', 8080))
     server = HTTPServer(('0.0.0.0', port), RosterHandler)
-    print(f"Server running on port {port}")
+    print(f'Server running on port {port}')
     server.serve_forever()
