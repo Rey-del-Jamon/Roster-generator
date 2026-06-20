@@ -10,7 +10,7 @@
   <div id="passcode-screen" class="passcode-overlay">
     <div class="passcode-box">
       <h2>Enter Passcode</h2>
-      <input type="password" id="passcode-input" placeholder="Passcode" />
+      <input type="password" inputmode="numeric" pattern="[0-9]*" id="passcode-input" placeholder="Passcode" />
       <button id="btn-submit-passcode" class="btn">Unlock</button>
       <p id="passcode-error" class="error" style="display: none;">Incorrect passcode.</p>
     </div>
